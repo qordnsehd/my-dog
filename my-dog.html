@@ -128,24 +128,46 @@ function analyze() {
 
     analyser.getByteFrequencyData(dataArray);
 
-    let avg = dataArray.reduce((a,b)=>a+b) / dataArray.length;
+    let sum = 0;
+    let maxIndex = 0;
+    let maxValue = 0;
 
-    // 🎯 간단한 로직
+    for (let i = 0; i < dataArray.length; i++) {
+        sum += dataArray[i];
+
+        if (dataArray[i] > maxValue) {
+            maxValue = dataArray[i];
+            maxIndex = i;
+        }
+    }
+
+    let avg = sum / dataArray.length;
+
+    // 🎯 주파수 추정
+    let frequency = maxIndex * (audioContext.sampleRate / analyser.fftSize);
+
     let result = "";
     let desc = "";
 
-    if (avg > 70) {
-        result = "🐶 흥분 상태!";
-        desc = "강아지가 반가워하거나 신난 상태일 가능성이 높아요";
-    } else if (avg > 40) {
-        result = "👀 관심/경계";
-        desc = "주변을 살피거나 누군가를 의식하고 있어요";
-    } else if (avg > 10) {
-        result = "😐 평온";
-        desc = "현재 안정된 상태입니다";
-    } else {
-        result = "🤫 조용함";
-        desc = "특별한 반응 없음";
+    if (avg > 60 && frequency > 1000) {
+        result = "🐶 신남 / 반가움";
+        desc = "높고 큰 소리 → 강한 흥분 상태";
+    } 
+    else if (frequency < 300 && avg > 40) {
+        result = "⚠️ 경계 / 위협";
+        desc = "낮고 강한 소리 → 경계 상태";
+    } 
+    else if (frequency > 800 && avg < 40) {
+        result = "😮 놀람 / 불안";
+        desc = "높지만 약한 소리 → 긴장 상태";
+    } 
+    else if (avg < 20) {
+        result = "😐 안정 상태";
+        desc = "조용하고 안정됨";
+    } 
+    else {
+        result = "👀 관찰 중";
+        desc = "환경을 인식하고 있음";
     }
 
     document.getElementById("result").innerText = result;
