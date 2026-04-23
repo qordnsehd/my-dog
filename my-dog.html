@@ -43,16 +43,16 @@ body {
 }
 
 .mic-btn {
-    width: 70px;
-    height: 70px;
+    width: 80px;
+    height: 80px;
     border-radius: 50%;
     border: none;
     background: var(--accent);
     color: white;
-    font-size: 1.5rem;
+    font-size: 2rem;
     cursor: pointer;
     display: block;
-    margin: 0 auto 10px;
+    margin: 0 auto 15px;
 }
 
 .status-text {
@@ -60,6 +60,10 @@ body {
     font-weight: bold;
     margin-bottom: 10px;
     color: var(--accent);
+}
+
+.result {
+    text-align: center;
 }
 </style>
 </head>
@@ -69,15 +73,18 @@ body {
 <div class="container">
     <div class="header">
         <h2>🐾 AI 번역 모드</h2>
-        <p>실시간 소리 분석</p>
+        <p>누르고 말하면 분석합니다</p>
     </div>
 
     <div class="translate-card" id="card">
         <button class="mic-btn" id="mic">🎤</button>
-        <div class="status-text" id="status">버튼을 눌러 시작</div>
 
-        <h3 id="result">---</h3>
-        <p id="desc">소리를 분석하면 결과가 나옵니다</p>
+        <div class="status-text" id="status">버튼을 눌러주세요</div>
+
+        <div class="result">
+            <h3 id="result">---</h3>
+            <p id="desc">소리를 분석하면 결과가 표시됩니다</p>
+        </div>
     </div>
 </div>
 
@@ -87,42 +94,51 @@ let analyser;
 let micStream;
 let dataArray;
 let isRunning = false;
+let stream;
 
 const micBtn = document.getElementById("mic");
 
-micBtn.onclick = async () => {
-    if (!isRunning) {
-        startMic();
-    } else {
-        stopMic();
-    }
-};
-
+// 🎤 시작
 async function startMic() {
-    document.getElementById("status").innerText = "🎧 듣는 중...";
-    document.getElementById("card").classList.add("active");
+    if (isRunning) return;
 
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    try {
+        stream = await navigator.mediaDevices.getUserMedia({ audio: true });
 
-    audioContext = new AudioContext();
-    analyser = audioContext.createAnalyser();
-    micStream = audioContext.createMediaStreamSource(stream);
+        audioContext = new AudioContext();
+        analyser = audioContext.createAnalyser();
+        micStream = audioContext.createMediaStreamSource(stream);
 
-    analyser.fftSize = 256;
-    dataArray = new Uint8Array(analyser.frequencyBinCount);
+        analyser.fftSize = 256;
+        dataArray = new Uint8Array(analyser.frequencyBinCount);
 
-    micStream.connect(analyser);
+        micStream.connect(analyser);
 
-    isRunning = true;
-    analyze();
+        isRunning = true;
+
+        document.getElementById("status").innerText = "🎧 듣는 중...";
+        document.getElementById("card").classList.add("active");
+
+        analyze();
+    } catch (err) {
+        alert("마이크 권한을 허용해주세요!");
+    }
 }
 
+// 🛑 종료
 function stopMic() {
+    if (!isRunning) return;
+
     isRunning = false;
-    document.getElementById("status").innerText = "분석 완료";
+
+    if (audioContext) audioContext.close();
+    if (stream) stream.getTracks().forEach(track => track.stop());
+
+    document.getElementById("status").innerText = "버튼을 눌러주세요";
     document.getElementById("card").classList.remove("active");
 }
 
+// 🔍 분석
 function analyze() {
     if (!isRunning) return;
 
@@ -142,8 +158,6 @@ function analyze() {
     }
 
     let avg = sum / dataArray.length;
-
-    // 🎯 주파수 추정
     let frequency = maxIndex * (audioContext.sampleRate / analyser.fftSize);
 
     let result = "";
@@ -175,6 +189,15 @@ function analyze() {
 
     requestAnimationFrame(analyze);
 }
+
+// 🎯 버튼 이벤트 (누르고 있을 때만)
+micBtn.addEventListener("mousedown", startMic);
+micBtn.addEventListener("mouseup", stopMic);
+micBtn.addEventListener("mouseleave", stopMic);
+
+// 📱 모바일
+micBtn.addEventListener("touchstart", startMic);
+micBtn.addEventListener("touchend", stopMic);
 </script>
 
 </body>
